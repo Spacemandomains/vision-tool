@@ -2011,7 +2011,7 @@ def analyze(file_path, prompt="", model=None):
 
     PER_CALL_TIMEOUT = 12
     TOTAL_TIMEOUT = 25
-    FAST_TIMEOUT = 4
+    FAST_TIMEOUT = 60
     FAST_SEQUENTIAL = min(2, len(strategies))
     warmup_memory = _has_unknown_backend_status(strategies, backend_memory)
     last_error = ""
