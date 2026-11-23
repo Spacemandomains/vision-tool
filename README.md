@@ -209,6 +209,7 @@ You need at least **one** of these:
 | Key | Get it | Powers |
 |-----|--------|--------|
 | **Gemini API key** ⭐ | https://aistudio.google.com/apikey | Gemini 2.5 Flash / 3 Pro / 2.0 Flash (free tier, tried first) |
+| **Meta Model API key** | https://dev.meta.ai/ | Muse Spark 1.3 via `MODEL_API_KEY` (OpenAI-compatible, `https://api.meta.ai/v1`); use model `meta/muse-spark-1.3` |
 | **Azure AI key** | https://ai.azure.com | Azure AI Foundry (12 models, free credits) |
 | **Groq API key** | https://console.groq.com/keys | Groq Llama 4 Scout (free tier) |
 | **Mistral AI API key** | https://console.mistral.ai/api-keys | Mistral pixtral-large (free tier) |

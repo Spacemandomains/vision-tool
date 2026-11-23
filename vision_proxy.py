@@ -209,7 +209,7 @@ ALL_PROVIDER_KEYS = [
     "GROQ_API_KEY", "HF_TOKEN", "MISTRAL_API_KEY", "GEMINI_API_KEY",
     "OPENROUTER_API_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
     "FIREWORKS_API_KEY", "ZAI_API_KEY", "TOGETHER_API_KEY",
-    "DEEPINFRA_API_KEY", "COHERE_API_KEY", "XAI_API_KEY",
+    "DEEPINFRA_API_KEY", "COHERE_API_KEY", "XAI_API_KEY", "MODEL_API_KEY",
 ]
 NATIVE_MODEL_PREFIXES = ("ollama/", "lmstudio/", "openai-local/")
 
@@ -276,6 +276,7 @@ def load_config(require_keys=True):
         "DEEPINFRA_API_KEY": os.environ.get("DEEPINFRA_API_KEY"),
         "COHERE_API_KEY": os.environ.get("COHERE_API_KEY"),
         "XAI_API_KEY": os.environ.get("XAI_API_KEY"),
+        "MODEL_API_KEY": os.environ.get("MODEL_API_KEY"),
         "DEFAULT_MODEL": os.environ.get("VISION_MODEL"),
     }
     cfg_path = _find_config()
@@ -313,7 +314,8 @@ def load_config(require_keys=True):
             "    $env:COHERE_API_KEY='...'             (dashboard.cohere.com/api-keys)\n"
             "    $env:XAI_API_KEY='...'                (console.x.ai)\n"
             "    $env:FIREWORKS_API_KEY='fw_...'       (fireworks.ai/api-keys)\n"
-            "    $env:ZAI_API_KEY='...'                (z.ai, Zhipu AI)\n"
+            "    $env:MODEL_API_KEY='your-key'   (Meta Model API - Muse Spark)\n"
+"    $env:ZAI_API_KEY='...'                (z.ai, Zhipu AI)\n"
             "    $env:VISION_MODEL='model-name'    (optional default model)"
         )
     return keys
@@ -575,6 +577,8 @@ def _provider_label_from_strategy(name):
         ("mistral", "Mistral"),
         ("fireworks", "Fireworks"),
         ("zai", "ZAI"),
+        ("meta ", "Meta"),
+        ("muse spark", "Meta"),
         ("ollama", "Ollama"),
         ("lm studio", "LM Studio"),
         ("lmstudio", "LM Studio"),
@@ -753,6 +757,8 @@ def _has_key(name):
         return bool(CFG.get("COHERE_API_KEY"))
     if "xAI" in name or "XAI" in name or "Grok" in name or "xai" in name:
         return bool(CFG.get("XAI_API_KEY"))
+    if "Meta " in name or "Muse Spark" in name or "meta" in name.lower().split():
+        return bool(CFG.get("MODEL_API_KEY"))
     if "OpenRouter" in name or "openrouter" in name:
         return bool(CFG.get("OPENROUTER_API_KEY"))
     if "Cloudflare" in name or "cloudflare" in name or "CF " in name:
@@ -965,6 +971,7 @@ DEEPINFRA_ENDPOINT = _api_http_base(os.environ.get("DEEPINFRA_BASE_URL"), "https
 XAI_ENDPOINT = _api_http_base(os.environ.get("XAI_BASE_URL"), "https://api.x.ai/v1")
 ANTHROPIC_ENDPOINT = _api_http_base(os.environ.get("ANTHROPIC_BASE_URL"), "https://api.anthropic.com/v1")
 COHERE_ENDPOINT = _api_http_base(os.environ.get("COHERE_BASE_URL"), "https://api.cohere.com/v2")
+META_ENDPOINT = _api_http_base(os.environ.get("META_BASE_URL"), "https://api.meta.ai/v1")
 
 
 def call_ollama(b64data, mime, prompt, model):
@@ -1157,6 +1164,15 @@ def call_xai(b64data, mime, prompt, model="grok-4.3"):
 
 def call_xai_multi(frames, prompt, model="grok-4.3"):
     return _call_openai_compatible_multi(XAI_ENDPOINT, "XAI_API_KEY", frames, prompt, model)
+
+
+def call_meta(b64data, mime, prompt, model="muse-spark-1.3"):
+    # Meta Model API (dev.meta.ai) - OpenAI-compatible, Bearer MODEL_API_KEY.
+    return _call_openai_compatible(META_ENDPOINT, "MODEL_API_KEY", b64data, mime, prompt, model)
+
+
+def call_meta_multi(frames, prompt, model="muse-spark-1.3"):
+    return _call_openai_compatible_multi(META_ENDPOINT, "MODEL_API_KEY", frames, prompt, model)
 
 
 def _extract_anthropic_text(data):
@@ -1680,6 +1696,8 @@ def get_providers_for_model(model):
             return _filter_providers([("openrouter", stripped)])
         if prefix in ("openai",):
             return _filter_providers([("openai", stripped)])
+        if prefix in ("meta",):
+            return _filter_providers([("meta", stripped)])
         if prefix in ("anthropic", "claude"):
             return _filter_providers([("anthropic", stripped)])
         if prefix in ("together", "togetherai"):
@@ -1735,6 +1753,7 @@ def _filter_providers(candidates):
         "mistral": "MISTRAL_API_KEY",
         "fireworks": "FIREWORKS_API_KEY",
         "zai": "ZAI_API_KEY",
+        "meta": "MODEL_API_KEY",
     }
     seen = set()
     result = []
@@ -1780,6 +1799,7 @@ def _build_strategies(kind, *args, prompt=""):
             ("\u2606 Gemini 3 Pro Preview", lambda: call_gemini_multi(frames, prompt, "gemini-3-pro-preview")),
             # OpenAI / Anthropic
             ("\u2606 OpenAI gpt-4o-mini", lambda: call_openai_multi(frames, prompt, "gpt-4o-mini")),
+            ("\u2606 Meta Muse Spark 1.3", lambda: call_meta_multi(frames, prompt, "muse-spark-1.3")),
             ("\u2606 Anthropic Claude Sonnet", lambda: call_anthropic_multi(frames, prompt, "claude-sonnet-4-5")),
             # OpenAI-compatible vision providers
             ("\u2606 Together Kimi-K2.5", lambda: call_together_multi(frames, prompt, "moonshotai/Kimi-K2.5")),
@@ -1822,6 +1842,7 @@ def _build_strategies(kind, *args, prompt=""):
             ("\u2606 Gemini 3 Pro Preview", lambda: call_gemini(img_b64, mime, prompt, "gemini-3-pro-preview")),
             # OpenAI / Anthropic
             ("\u2606 OpenAI gpt-4o-mini", lambda: call_openai(img_b64, mime, prompt, "gpt-4o-mini")),
+            ("\u2606 Meta Muse Spark 1.3", lambda: call_meta(img_b64, mime, prompt, "muse-spark-1.3")),
             ("\u2606 Anthropic Claude Sonnet", lambda: call_anthropic(img_b64, mime, prompt, "claude-sonnet-4-5")),
             # OpenAI-compatible vision providers
             ("\u2606 Together Kimi-K2.5", lambda: call_together(img_b64, mime, prompt, "moonshotai/Kimi-K2.5")),
@@ -1874,6 +1895,7 @@ def _insert_model_strategies(strategies, model, kind, *args, prompt=""):
         "fireworks": (call_fireworks, call_fireworks_multi),
         "gemini": (call_gemini, call_gemini_multi),
         "zai": (call_zai, call_zai_multi),
+        "meta": (call_meta, call_meta_multi),
     }
     is_vid = kind == "vid"
     for prov, native_model in reversed(get_providers_for_model(model)):

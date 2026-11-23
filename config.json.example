@@ -5,6 +5,7 @@
   "AZUREAI_API_KEY": "",
   "AZUREAI_ENDPOINT": "",
   "OPENAI_API_KEY": "",
+  "MODEL_API_KEY": "",
   "ANTHROPIC_API_KEY": "",
   "MISTRAL_API_KEY": "",
   "GROQ_API_KEY": "",
